@@ -1,0 +1,122 @@
+# python 2.7
+
+import getpass
+
+from pythonzimbra.tools import auth
+from pythonzimbra.request_xml import RequestXml
+from pythonzimbra.response_xml import ResponseXml
+from pythonzimbra.communication import Communication
+
+
+def displayRule(rule):
+    print '// ' + rule['name']
+    if rule['active'] == '0':
+        print '// inactive'
+    print 'if',
+    displayTest(rule['filterTests'])
+    print '{'
+    displayActions(rule['filterActions'])
+    print '}'
+
+
+def displayTest(test):
+    print test['condition'] + ' ('
+    print ',\n'.join(transformTests(test))
+    print ')',
+
+
+def transformTests(tests):
+    new_tests = []
+    for key in ['headerTest', 'sizeTest']:
+        if key in tests:
+            t = tests[key]
+            if not isinstance(t, list):
+                t = [t]
+            for tt in t:
+                tt['test'] = key[:-4]
+            new_tests.extend(t)
+    return map(showTest, new_tests)
+
+
+def showTest(test):
+    show = '   '
+    if test.get('negative') == '1':
+        show += 'not '
+    if test['test'] == 'header':
+        show += 'header :' + test['stringComparison']
+        if test.get('caseSensitive') == '1':
+            show += ' :comparator "i;ascii-casemap"'
+        show += ' ["' + test['header'] + '"] ["' + test['value'] + '"]'
+        return show
+    if test['test'] == 'address':
+        show += 'address :' + test['stringComparison'] + ' :' + test['part']
+        if test.get('caseSensitive') == '1':
+            show += ' :comparator "i;ascii-casemap"'
+        show += ' ["' + test['header'] + '"] ["' + test['value'] + '"]'
+        return show
+    if test['test'] == 'size':
+        show += 'size :' + test['numberComparison'] + ' ' + test['s']
+
+
+def displayActions(actions):
+    a = actions.items()
+    a.sort(key=lambda (_, x): x.get('index'))
+    for action in a:
+        print '  ',
+        displayAction(action)
+
+
+def displayAction(action):
+    if action[0] == 'actionFileInto':
+        print 'fileinto "' + action[1]['folderPath'] + '";'
+        return
+    if action[0] == 'actionStop':
+        print 'stop;'
+        return
+    if action[0] == 'actionRedirect':
+        print 'redirect "' + action[1]['a'] + '";'
+        return
+    if action[0] == 'actionKeep':
+        print 'keep;'
+        return
+    if action[0] == 'actionDiscard':
+        print 'discard;'
+        return
+    # Zimbra specific
+    if action[0] == 'actionFlag':
+        print 'flag "' + action[1]['flagName'] + '";'
+        return
+    if action[0] == 'actionTag':
+        print 'tag "' + action[1]['tagName'] + '";'
+        return
+    # reply and notify not taken into account
+
+
+def main():
+    login = 'Sylvain.Soliman@inria.fr'
+    passwd = getpass.getpass()
+    url = 'https://zimbra.inria.fr/service/soap/'
+
+    token = auth.authenticate(
+        url,
+        login,
+        passwd,
+        use_password=True)
+
+    request = RequestXml()
+    request.set_auth_token(token)
+    request.add_request('GetFilterRulesRequest', {}, 'urn:zimbraMail')
+
+    response = ResponseXml()
+    comm = Communication(url)
+    comm.send_request(request, response)
+
+    if not response.is_fault():
+        rules = response.get_response()
+        rules = rules['GetFilterRulesResponse']['filterRules']['filterRule']
+        for rule in rules:
+            displayRule(rule)
+            print
+
+if __name__ == '__main__':
+    main()
