@@ -8,24 +8,24 @@ from pythonzimbra.response_xml import ResponseXml
 from pythonzimbra.communication import Communication
 
 
-def displayRule(rule):
+def display_rule(rule):
     print '// ' + rule['name']
     if rule['active'] == '0':
         print '// inactive'
     print 'if',
-    displayTest(rule['filterTests'])
+    display_test(rule['filterTests'])
     print '{'
-    displayActions(rule['filterActions'])
+    display_actions(rule['filterActions'])
     print '}'
 
 
-def displayTest(test):
+def display_test(test):
     print test['condition'] + ' ('
-    print ',\n'.join(transformTests(test))
+    print ',\n'.join(transform_tests(test))
     print ')',
 
 
-def transformTests(tests):
+def transform_tests(tests):
     new_tests = []
     for key in ['headerTest', 'sizeTest']:
         if key in tests:
@@ -35,10 +35,10 @@ def transformTests(tests):
             for tt in t:
                 tt['test'] = key[:-4]
             new_tests.extend(t)
-    return map(showTest, new_tests)
+    return map(show_test, new_tests)
 
 
-def showTest(test):
+def show_test(test):
     show = '   '
     if test.get('negative') == '1':
         show += 'not '
@@ -58,15 +58,15 @@ def showTest(test):
         show += 'size :' + test['numberComparison'] + ' ' + test['s']
 
 
-def displayActions(actions):
+def display_actions(actions):
     a = actions.items()
     a.sort(key=lambda (_, x): x.get('index'))
     for action in a:
         print '  ',
-        displayAction(action)
+        display_action(action)
 
 
-def displayAction(action):
+def display_action(action):
     if action[0] == 'actionFileInto':
         print 'fileinto "' + action[1]['folderPath'] + '";'
         return
@@ -115,7 +115,7 @@ def main():
         rules = response.get_response()
         rules = rules['GetFilterRulesResponse']['filterRules']['filterRule']
         for rule in rules:
-            displayRule(rule)
+            display_rule(rule)
             print
 
 if __name__ == '__main__':
