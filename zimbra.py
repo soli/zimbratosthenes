@@ -1,4 +1,5 @@
 # python 2.7
+from __future__ import print_function
 
 import getpass
 import sys
@@ -14,25 +15,25 @@ from sievelib.commands import ActionCommand, TestCommand, add_commands
 
 
 def display_rule(rule):
-    print '# ' + rule['name']
+    print('# ' + rule['name'])
     if rule['active'] == '0':
-        print '# inactive'
-    print 'if',
+        print('# inactive')
+    print('if ', end='')
     display_test(rule['filterTests'])
-    print '{'
+    print('{')
     display_actions(rule['filterActions'])
-    print '}'
+    print('}')
 
 
 def display_test(test):
-    print test['condition'] + ' ('
-    print ',\n'.join(transform_tests(test))
-    print ')',
+    print(test['condition'] + ' (')
+    print(',\n'.join(transform_tests(test)))
+    print(') ', end='')
 
 
 def transform_tests(tests):
     new_tests = []
-    known_tests = ['headerTest', 'sizeTest', 'dateTest']
+    known_tests = ['headerTest', 'sizeTest', 'dateTest', 'bodyTest']
     for key in known_tests:
         if key in tests:
             t = tests[key]
@@ -45,16 +46,18 @@ def transform_tests(tests):
     known_tests.append('condition')
     for key in tests.keys():
         if key not in known_tests:
-            print '/* unknown test category ' + key + ' - ' + \
-                str(tests[key]) + ' */ true'
+            print('/* unknown test category ' + key + ' - ' +
+                  str(tests[key]) + ' */ true')
     new_tests.sort(key=lambda x: x.get('index'))
     return map(show_test, new_tests)
 
 
-def to_le_ge(before_after):
-    if before_after == "before":
-        return "le"
-    return "ge"
+def translate(category, key):
+    dic = {
+        'date': {'before': 'le', 'after': 'ge'},
+        'flag': {'read': '\\\\Seen', 'flagged': '\\\\Flagged'}
+    }
+    return dic[category][key]
 
 
 def show_test(test):
@@ -65,55 +68,60 @@ def show_test(test):
         show += 'size :' + test['numberComparison'] + ' ' + test['s']
         return show
     if test['test'] == 'date':
-        show += 'date :value "' + to_le_ge(test['dateComparison']) + \
+        show += 'date :value "' + translate('date', test['dateComparison']) + \
             '" "date" "' + date.fromtimestamp(int(test['d'])).isoformat() + '"'
         return show
+    if test['test'] == 'body':
+        show += 'body :contains'
     if test['test'] == 'header':
         show += 'header :' + test['stringComparison']
     if test['test'] == 'address':
         show += 'address :' + test['stringComparison'] + ' :' + test['part']
-    if test['test'] not in ['header', 'address']:
-        return '/* unknown test: ' + str(test) + ' */ true'
     if test.get('caseSensitive') == '1':
         show += ' :comparator "i;ascii-casemap"'
-    show += ' ["' + '", "'.join(test['header'].split(',')) + \
-        '"] ["' + test['value'] + '"]'
-    return show
+    if test['test'] in ['header', 'address']:
+        show += ' ["' + '", "'.join(test['header'].split(',')) + \
+            '"] ["' + test['value'] + '"]'
+        return show
+    if test['test'] == 'body':
+        show += ' "' + test['string'] + '"'
+        return show
+    return '/* unknown test: ' + str(test) + ' */ true'
 
 
 def display_actions(actions):
     a = actions.items()
     a.sort(key=lambda (_, x): x.get('index'))
     for action in a:
-        print '  ',
+        print('   ', end='')
         display_action(action)
 
 
 def display_action(action):
     if action[0] == 'actionFileInto':
-        print 'fileinto "' + action[1]['folderPath'] + '";'
+        print('fileinto "' + action[1]['folderPath'] + '";')
         return
     if action[0] == 'actionStop':
-        print 'stop;'
+        print('stop;')
         return
     if action[0] == 'actionRedirect':
-        print 'redirect "' + action[1]['a'] + '";'
+        print('redirect "' + action[1]['a'] + '";')
         return
     if action[0] == 'actionKeep':
-        print 'keep;'
+        print('keep;')
         return
     if action[0] == 'actionDiscard':
-        print 'discard;'
+        print('discard;')
         return
     # Zimbra specific
     if action[0] == 'actionFlag':
-        print 'flag "' + action[1]['flagName'] + '";'
+        print('addflag "' + translate('flag', action[1]['flagName']) + '";')
         return
     if action[0] == 'actionTag':
-        print 'tag "' + action[1]['tagName'] + '";'
+        print('tag "' + action[1]['tagName'] + '";')
         return
     # reply and notify not taken into account
-    print '/* unknown action: ' + str(action) + ' */ keep;'
+    print('/* unknown action: ' + str(action) + ' */ keep;')
 
 
 def authenticate(url):
@@ -131,7 +139,7 @@ def authenticate(url):
     return request
 
 
-class FlagCommand(ActionCommand):
+class AddflagCommand(ActionCommand):
     args_definition = [
         {
             "name": "flag",
@@ -186,11 +194,11 @@ class DateCommand(TestCommand):
 
 
 def parse():
-    print 'parsing ' + sys.argv[1]
-    add_commands([FlagCommand, TagCommand, DateCommand])
+    print('parsing ' + sys.argv[1])
+    add_commands([AddflagCommand, TagCommand, DateCommand])
     p = Parser()
     if p.parse_file(sys.argv[1]) is False:
-        print p.error
+        print(p.error)
     else:
         p.dump()
 
@@ -208,10 +216,12 @@ def main():
 
         if not response.is_fault():
             rules = response.get_response()['GetFilterRulesResponse']
-            print 'require ["date", "relational", "fileinto"];\n'
+            print('require ["date", "relational", "fileinto",' +
+                  ' "imap4flags", "body"];')
+            print()
             for rule in rules['filterRules']['filterRule']:
                 display_rule(rule)
-                print
+                print()
     else:
         parse()
 
