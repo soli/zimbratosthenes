@@ -15,9 +15,8 @@ from sievelib.commands import ActionCommand, TestCommand, add_commands
 
 
 def display_rule(rule):
-    print('# ' + rule['name'])
-    if rule['active'] == '0':
-        print('# inactive')
+    print('set "name" "' + rule['name'] + '";')
+    print('set "active" "' + rule['active'] + '";')
     print('if ', end='')
     display_test(rule['filterTests'])
     print('{')
@@ -149,6 +148,21 @@ class AddflagCommand(ActionCommand):
     ]
 
 
+class SetCommand(ActionCommand):
+    args_definition = [
+        {
+            "name": "name",
+            "type": "string",
+            "required": True
+        },
+        {
+            "name": "value",
+            "type": "string",
+            "required": True
+        }
+    ]
+
+
 class TagCommand(ActionCommand):
     args_definition = [
         {
@@ -195,7 +209,7 @@ class DateCommand(TestCommand):
 
 def parse():
     print('parsing ' + sys.argv[1])
-    add_commands([AddflagCommand, TagCommand, DateCommand])
+    add_commands([AddflagCommand, SetCommand, TagCommand, DateCommand])
     p = Parser()
     if p.parse_file(sys.argv[1]) is False:
         print(p.error)
@@ -217,7 +231,7 @@ def main():
         if not response.is_fault():
             rules = response.get_response()['GetFilterRulesResponse']
             print('require ["date", "relational", "fileinto",' +
-                  ' "imap4flags", "body"];')
+                  ' "imap4flags", "body", "variables"];')
             print()
             for rule in rules['filterRules']['filterRule']:
                 display_rule(rule)
