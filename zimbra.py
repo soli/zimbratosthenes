@@ -9,9 +9,9 @@ from pythonzimbra.communication import Communication
 
 
 def display_rule(rule):
-    print '// ' + rule['name']
+    print '# ' + rule['name']
     if rule['active'] == '0':
-        print '// inactive'
+        print '# inactive'
     print 'if',
     display_test(rule['filterTests'])
     print '{'
@@ -115,9 +115,8 @@ def main():
     comm.send_request(request, response)
 
     if not response.is_fault():
-        rules = response.get_response()
-        rules = rules['GetFilterRulesResponse']['filterRules']['filterRule']
-        for rule in rules:
+        rules = response.get_response()['GetFilterRulesResponse']
+        for rule in rules['filterRules']['filterRule']:
             display_rule(rule)
             print
 
