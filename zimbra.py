@@ -1,11 +1,15 @@
 # python 2.7
 
 import getpass
+import sys
 
 from pythonzimbra.tools import auth
 from pythonzimbra.request_xml import RequestXml
 from pythonzimbra.response_xml import ResponseXml
 from pythonzimbra.communication import Communication
+
+from sievelib.parser import Parser
+# from sievelib.commands import ActionCommand, add_commands
 
 
 def display_rule(rule):
@@ -95,10 +99,9 @@ def display_action(action):
     print '/* unknown action: ' + action + ' */ keep;'
 
 
-def main():
+def authenticate(url):
     login = 'Sylvain.Soliman@inria.fr'
     passwd = getpass.getpass()
-    url = 'https://zimbra.inria.fr/service/soap/'
 
     token = auth.authenticate(
         url,
@@ -108,18 +111,37 @@ def main():
 
     request = RequestXml()
     request.set_auth_token(token)
-    request.add_request('GetFilterRulesRequest', {}, 'urn:zimbraMail')
+    return request
 
-    response = ResponseXml()
-    comm = Communication(url)
-    comm.send_request(request, response)
 
-    if not response.is_fault():
-        rules = response.get_response()['GetFilterRulesResponse']
-        print 'require ["fileinto"];\n'
-        for rule in rules['filterRules']['filterRule']:
-            display_rule(rule)
-            print
+def parse():
+    pass
+
+
+def main():
+    url = 'https://zimbra.inria.fr/service/soap/'
+    request = authenticate(url)
+
+    if len(sys.argv) < 2:
+        request.add_request('GetFilterRulesRequest', {}, 'urn:zimbraMail')
+
+        response = ResponseXml()
+        comm = Communication(url)
+        comm.send_request(request, response)
+
+        if not response.is_fault():
+            rules = response.get_response()['GetFilterRulesResponse']
+            print 'require ["fileinto"];\n'
+            for rule in rules['filterRules']['filterRule']:
+                display_rule(rule)
+                print
+    else:
+        print 'parsing ' + sys.argv[1]
+        p = Parser()
+        with open(sys.argv[1]) as f:
+            if p.parse(f.read()) is False:
+                print p.error
+
 
 if __name__ == '__main__':
     main()
