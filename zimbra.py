@@ -9,7 +9,7 @@ from pythonzimbra.response_xml import ResponseXml
 from pythonzimbra.communication import Communication
 
 from sievelib.parser import Parser
-# from sievelib.commands import ActionCommand, add_commands
+from sievelib.commands import ActionCommand, add_commands
 
 
 def display_rule(rule):
@@ -31,7 +31,8 @@ def display_test(test):
 
 def transform_tests(tests):
     new_tests = []
-    for key in ['headerTest', 'sizeTest']:
+    known_tests = ['headerTest', 'sizeTest']
+    for key in known_tests:
         if key in tests:
             t = tests[key]
             # single element is not in a list...
@@ -40,6 +41,11 @@ def transform_tests(tests):
             for tt in t:
                 tt['test'] = key[:-4]
             new_tests.extend(t)
+    known_tests.append('condition')
+    for key in tests.keys():
+        if key not in known_tests:
+            print '/* unknown test category ' + key + ' - ' + \
+                str(tests[key]) + ' */ true'
     new_tests.sort(key=lambda x: x.get('index'))
     return map(show_test, new_tests)
 
@@ -56,7 +62,7 @@ def show_test(test):
     if test['test'] == 'address':
         show += 'address :' + test['stringComparison'] + ' :' + test['part']
     if test['test'] not in ['header', 'address']:
-        return '/* unknown test: ' + test + ' */ true'
+        return '/* unknown test: ' + str(test) + ' */ true'
     if test.get('caseSensitive') == '1':
         show += ' :comparator "i;ascii-casemap"'
     show += ' ["' + '", "'.join(test['header'].split(',')) + \
@@ -96,7 +102,7 @@ def display_action(action):
         print 'tag "' + action[1]['tagName'] + '";'
         return
     # reply and notify not taken into account
-    print '/* unknown action: ' + action + ' */ keep;'
+    print '/* unknown action: ' + str(action) + ' */ keep;'
 
 
 def authenticate(url):
@@ -114,8 +120,34 @@ def authenticate(url):
     return request
 
 
+class FlagCommand(ActionCommand):
+    args_definition = [
+        {
+            "name": "flag",
+            "type": "string",
+            "required": True
+        }
+    ]
+
+
+class TagCommand(ActionCommand):
+    args_definition = [
+        {
+            "name": "tag",
+            "type": "string",
+            "required": True
+        }
+    ]
+
+
 def parse():
-    pass
+    print 'parsing ' + sys.argv[1]
+    add_commands([FlagCommand, TagCommand])
+    p = Parser()
+    if p.parse_file(sys.argv[1]) is False:
+        print p.error
+    else:
+        p.dump()
 
 
 def main():
@@ -136,11 +168,7 @@ def main():
                 display_rule(rule)
                 print
     else:
-        print 'parsing ' + sys.argv[1]
-        p = Parser()
-        with open(sys.argv[1]) as f:
-            if p.parse(f.read()) is False:
-                print p.error
+        parse()
 
 
 if __name__ == '__main__':
