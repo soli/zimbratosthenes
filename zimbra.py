@@ -2,6 +2,7 @@
 
 import getpass
 import sys
+from datetime import date
 
 from pythonzimbra.tools import auth
 from pythonzimbra.request_xml import RequestXml
@@ -9,7 +10,7 @@ from pythonzimbra.response_xml import ResponseXml
 from pythonzimbra.communication import Communication
 
 from sievelib.parser import Parser
-from sievelib.commands import ActionCommand, add_commands
+from sievelib.commands import ActionCommand, TestCommand, add_commands
 
 
 def display_rule(rule):
@@ -31,7 +32,7 @@ def display_test(test):
 
 def transform_tests(tests):
     new_tests = []
-    known_tests = ['headerTest', 'sizeTest']
+    known_tests = ['headerTest', 'sizeTest', 'dateTest']
     for key in known_tests:
         if key in tests:
             t = tests[key]
@@ -50,12 +51,22 @@ def transform_tests(tests):
     return map(show_test, new_tests)
 
 
+def to_le_ge(before_after):
+    if before_after == "before":
+        return "le"
+    return "ge"
+
+
 def show_test(test):
     show = '   '
     if test.get('negative') == '1':
         show += 'not '
     if test['test'] == 'size':
         show += 'size :' + test['numberComparison'] + ' ' + test['s']
+        return show
+    if test['test'] == 'date':
+        show += 'date :value "' + to_le_ge(test['dateComparison']) + \
+            '" "date" "' + date.fromtimestamp(int(test['d'])).isoformat() + '"'
         return show
     if test['test'] == 'header':
         show += 'header :' + test['stringComparison']
@@ -140,9 +151,43 @@ class TagCommand(ActionCommand):
     ]
 
 
+class DateCommand(TestCommand):
+    is_extension = True
+    args_definition = [
+        {
+            "name": "zone",
+            "type": ["tag"],
+            "write_tag": True,
+            "values": [":zone"],
+            "extra_arg": {"type": "string"},
+            "required": False
+        },
+        {
+            "name": "match-value",
+            "type": ["tag"],
+            "required": True
+        },
+        {
+            "name": "comparison",
+            "type": ["string"],
+            "required": True
+        },
+        {
+            "name": "match-against",
+            "type": ["string"],
+            "required": True
+        },
+        {
+            "name": "match-against-field",
+            "type": ["string"],
+            "required": True
+        }
+    ]
+
+
 def parse():
     print 'parsing ' + sys.argv[1]
-    add_commands([FlagCommand, TagCommand])
+    add_commands([FlagCommand, TagCommand, DateCommand])
     p = Parser()
     if p.parse_file(sys.argv[1]) is False:
         print p.error
@@ -163,7 +208,7 @@ def main():
 
         if not response.is_fault():
             rules = response.get_response()['GetFilterRulesResponse']
-            print 'require ["fileinto"];\n'
+            print 'require ["date", "relational", "fileinto"];\n'
             for rule in rules['filterRules']['filterRule']:
                 display_rule(rule)
                 print
