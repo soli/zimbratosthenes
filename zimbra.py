@@ -116,6 +116,7 @@ def main():
 
     if not response.is_fault():
         rules = response.get_response()['GetFilterRulesResponse']
+        print 'require ["fileinto"];\n'
         for rule in rules['filterRules']['filterRule']:
             display_rule(rule)
             print
