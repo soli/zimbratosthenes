@@ -30,11 +30,13 @@ def transform_tests(tests):
     for key in ['headerTest', 'sizeTest']:
         if key in tests:
             t = tests[key]
+            # single element is not in a list...
             if not isinstance(t, list):
                 t = [t]
             for tt in t:
                 tt['test'] = key[:-4]
             new_tests.extend(t)
+    new_tests.sort(key=lambda x: x.get('index'))
     return map(show_test, new_tests)
 
 
@@ -49,6 +51,8 @@ def show_test(test):
         show += 'header :' + test['stringComparison']
     if test['test'] == 'address':
         show += 'address :' + test['stringComparison'] + ' :' + test['part']
+    if test['test'] not in ['header', 'address']:
+        return '/* unknown test: ' + test + ' */ true'
     if test.get('caseSensitive') == '1':
         show += ' :comparator "i;ascii-casemap"'
     show += ' ["' + '", "'.join(test['header'].split(',')) + \
@@ -88,6 +92,7 @@ def display_action(action):
         print 'tag "' + action[1]['tagName'] + '";'
         return
     # reply and notify not taken into account
+    print '/* unknown action: ' + action + ' */ keep;'
 
 
 def main():
