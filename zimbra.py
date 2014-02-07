@@ -42,20 +42,18 @@ def show_test(test):
     show = '   '
     if test.get('negative') == '1':
         show += 'not '
-    if test['test'] == 'header':
-        show += 'header :' + test['stringComparison']
-        if test.get('caseSensitive') == '1':
-            show += ' :comparator "i;ascii-casemap"'
-        show += ' ["' + test['header'] + '"] ["' + test['value'] + '"]'
-        return show
-    if test['test'] == 'address':
-        show += 'address :' + test['stringComparison'] + ' :' + test['part']
-        if test.get('caseSensitive') == '1':
-            show += ' :comparator "i;ascii-casemap"'
-        show += ' ["' + test['header'] + '"] ["' + test['value'] + '"]'
-        return show
     if test['test'] == 'size':
         show += 'size :' + test['numberComparison'] + ' ' + test['s']
+        return show
+    if test['test'] == 'header':
+        show += 'header :' + test['stringComparison']
+    if test['test'] == 'address':
+        show += 'address :' + test['stringComparison'] + ' :' + test['part']
+    if test.get('caseSensitive') == '1':
+        show += ' :comparator "i;ascii-casemap"'
+    show += ' ["' + '", "'.join(test['header'].split(',')) + \
+        '"] ["' + test['value'] + '"]'
+    return show
 
 
 def display_actions(actions):
