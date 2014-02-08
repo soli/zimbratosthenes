@@ -12,7 +12,7 @@ from pythonzimbra.communication import Communication
 
 from sievelib.parser import Parser
 from sievelib.commands import ActionCommand, TestCommand, RequireCommand, \
-    IfCommand, HeaderCommand, add_commands
+    IfCommand, HeaderCommand, AddressCommand, SizeCommand, add_commands
 
 
 def display_rule(rule):
@@ -46,6 +46,8 @@ def transform_tests(tests):
     known_tests.append('condition')
     for key in tests.keys():
         if key not in known_tests:
+            print('Warning: unknown test category ' + key + ' - ' +
+                  str(tests[key]), file=sys.stderr)
             print('/* unknown test category ' + key + ' - ' +
                   str(tests[key]) + ' */ true')
     new_tests.sort(key=lambda x: x.get('index'))
@@ -86,6 +88,7 @@ def show_test(test):
     if test['test'] == 'body':
         show += ' "' + test['string'] + '"'
         return show
+    print('Warning: unknown test: ' + str(test), file=sys.stderr)
     return '/* unknown test: ' + str(test) + ' */ true'
 
 
@@ -121,6 +124,7 @@ def display_action(action):
         print('tag "' + action[1]['tagName'] + '";')
         return
     # reply and notify not taken into account
+    print('Warning: unknown action: ' + str(action), file=sys.stderr)
     print('/* unknown action: ' + str(action) + ' */ keep;')
 
 
@@ -213,10 +217,28 @@ def zimbrify_header(htest, index, negative=False):
         u'header': ','.join(map(lambda h: h[1:-1], htest['header-names']))
     }
     if negative:
-        h[u'negative'] = '1'
+        h[u'negative'] = u'1'
     if 'comparator' in htest.arguments:
-        if htest['comparator']['extra_arg']['values'] == '"i;ascii-casemap"':
-            h[u'caseSensitive'] = '0'
+        if htest['comparator']['extra_arg'] == '"i;ascii-casemap"':
+            h[u'caseSensitive'] = u'0'
+    return h
+
+
+def zimbrify_address(htest, index, negative=False):
+    h = zimbrify_header(htest, index, negative)
+    if 'address_part' in htest.arguments:
+        h[u'part'] = htest['address_part'][1:]
+    return h
+
+
+def zimbrify_size(htest, index, negative=False):
+    h = {
+        u'index': index,
+        u'numberComparison': htest['comparator'][1:],
+        u's': str(htest['limit'])
+    }
+    if negative:
+        h[u'negative'] = u'1'
     return h
 
 
@@ -227,9 +249,19 @@ def zimbrify_test(test):
     for (index, t) in enumerate(test['tests']):
         if isinstance(t, HeaderCommand):
             tt = zimbrify_header(t, index + 1)
-            if 'headerTest' not in tests:
-                tests['headerTest'] = []
-            tests['headerTest'].append(tt)
+            if u'headerTest' not in tests:
+                tests[u'headerTest'] = []
+            tests[u'headerTest'].append(tt)
+        if isinstance(t, AddressCommand):
+            tt = zimbrify_address(t, index + 1)
+            if u'addressTest' not in tests:
+                tests[u'addressTest'] = []
+            tests[u'headerTest'].append(tt)
+        if isinstance(t, SizeCommand):
+            tt = zimbrify_size(t, index + 1)
+            if u'sizeTest' not in tests:
+                tests[u'sizeTest'] = []
+            tests[u'headerTest'].append(tt)
     actions = {}
     return(tests, actions)
 
