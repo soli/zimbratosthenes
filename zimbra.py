@@ -448,16 +448,16 @@ def main():
                 print()
         else:
             new_rules = {u'filterRules': {u'filterRule': parse()}}
-            request.clear()
-            response.clear()
+            request = RequestXml()
+            response = ResponseXml()
             request.set_auth_token(token)
             request.add_request('ModifyFilterRulesRequest', new_rules,
                                 'urn:zimbraMail')
             comm.send_request(request, response)
 
             if response.is_fault():
-                request.clear()
-                response.clear()
+                request = RequestXml()
+                response = ResponseXml()
                 request.set_auth_token(token)
                 request.add_request('ModifyFilterRulesRequest', rules,
                                     'urn:zimbraMail')
