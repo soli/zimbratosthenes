@@ -13,6 +13,7 @@ from pythonzimbra.communication import Communication
 from sievelib.parser import Parser
 from sievelib.commands import ActionCommand, TestCommand, RequireCommand, \
     IfCommand, HeaderCommand, AddressCommand, SizeCommand, NotCommand, \
+    ExistsCommand, \
     add_commands, comparator, match_type
 
 
@@ -233,29 +234,26 @@ class BodyCommand(TestCommand):
     ]
 
 
-def zimbrify_header(htest, index, negative):
+def zimbrify_header(htest):
     h = {
-        u'index': index,
         u'stringComparison': htest['match-type'][1:],
         u'value': htest['key-list'][0][1:-1],
         u'header': ','.join(map(lambda h: h[1:-1], htest['header-names']))
     }
-    if negative:
-        h[u'negative'] = u'1'
     if 'comparator' in htest.arguments:
         if htest['comparator']['extra_arg'] == '"i;ascii-casemap"':
             h[u'caseSensitive'] = u'0'
     return h
 
 
-def zimbrify_address(htest, index, negative):
-    h = zimbrify_header(htest, index, negative)
+def zimbrify_address(htest):
+    h = zimbrify_header(htest)
     if 'address_part' in htest.arguments:
         h[u'part'] = htest['address_part'][1:]
     return h
 
 
-def zimbrify_size(htest, index, negative):
+def zimbrify_size(htest):
     limit = int(htest['limit'])
     units = [u'B', u'K', u'M', u'G']
     idx = 0
@@ -264,13 +262,14 @@ def zimbrify_size(htest, index, negative):
         idx += 1
     limit = unicode(limit) + units[idx]
     h = {
-        u'index': unicode(index),
         u'numberComparison': htest['comparator'][1:],
         u's': limit
     }
-    if negative:
-        h[u'negative'] = u'1'
     return h
+
+
+def zimbrify_exist(htest):
+    return {u'header': htest['header-names'][0][1:-1]}
 
 
 def zimbrify_test(test):
@@ -278,26 +277,32 @@ def zimbrify_test(test):
         u'condition': test.name
     }
     for (index, t) in enumerate(test['tests']):
+        cat = None
         if isinstance(t, NotCommand):
             t = t['test']
             negative = True
         else:
             negative = False
         if isinstance(t, HeaderCommand):
-            tt = zimbrify_header(t, index, negative)
-            if u'headerTest' not in tests:
-                tests[u'headerTest'] = []
-            tests[u'headerTest'].append(tt)
+            tt = zimbrify_header(t)
+            cat = u'headerTest'
         if isinstance(t, AddressCommand):
-            tt = zimbrify_address(t, index, negative)
-            if u'addressTest' not in tests:
-                tests[u'addressTest'] = []
-            tests[u'addressTest'].append(tt)
+            tt = zimbrify_address(t)
+            cat = u'addressTest'
         if isinstance(t, SizeCommand):
-            tt = zimbrify_size(t, index, negative)
-            if u'sizeTest' not in tests:
-                tests[u'sizeTest'] = []
-            tests[u'sizeTest'].append(tt)
+            tt = zimbrify_size(t)
+            cat = u'sizeTest'
+        if isinstance(t, ExistsCommand):
+            tt = zimbrify_exist(t)
+            cat = u'headerExistsTest'
+
+        if cat is not None:
+            if negative:
+                tt[u'negative'] = u'1'
+            tt[u'index'] = unicode(index)
+            if cat not in tests:
+                tests[cat] = []
+            tests[cat].append(tt)
     actions = {}
     return(tests, actions)
 
