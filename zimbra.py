@@ -3,7 +3,7 @@ from __future__ import print_function
 
 import getpass
 import sys
-from datetime import date
+from datetime import date, datetime
 
 from pythonzimbra.tools import auth
 from pythonzimbra.request_xml import RequestXml
@@ -281,6 +281,21 @@ def zimbrify_body(htest):
     return h
 
 
+def zimbrify_date(htest):
+    if htest['comparison'] == '"le"':
+        comp = u'before'
+    else:
+        comp = u'after'
+    dt = htest['match-against-field']
+    since_epoch = int(((datetime(int(dt[1:5]), int(dt[6:8]), int(dt[9:11])) -
+                        datetime(1970, 1, 1)) -
+                       (datetime.now() - datetime.utcnow())).total_seconds())
+    return {
+        u'd': unicode(since_epoch),
+        u'dateComparison': comp
+    }
+
+
 def zimbrify_test(test):
     tests = {
         u'condition': test.name
@@ -307,6 +322,9 @@ def zimbrify_test(test):
         if isinstance(t, BodyCommand):
             tt = zimbrify_body(t)
             cat = u'bodyTest'
+        if isinstance(t, DateCommand):
+            tt = zimbrify_date(t)
+            cat = u'dateTest'
 
         if cat is not None:
             if negative:
