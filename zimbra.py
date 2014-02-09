@@ -13,7 +13,8 @@ from pythonzimbra.communication import Communication
 from sievelib.parser import Parser
 from sievelib.commands import ActionCommand, TestCommand, RequireCommand, \
     IfCommand, HeaderCommand, AddressCommand, SizeCommand, NotCommand, \
-    ExistsCommand, \
+    ExistsCommand, KeepCommand, DiscardCommand, StopCommand, FileintoCommand, \
+    RedirectCommand, \
     add_commands, comparator, match_type
 
 
@@ -238,7 +239,8 @@ def zimbrify_header(htest):
     h = {
         u'stringComparison': unicode(htest['match-type'][1:]),
         u'value': unicode(htest['key-list'][0][1:-1]),
-        u'header': ','.join(map(lambda h: h[1:-1], htest['header-names']))
+        u'header': unicode(
+            ','.join(map(lambda h: h[1:-1], htest['header-names'])))
     }
     if 'comparator' in htest.arguments:
         if htest['comparator']['extra_arg'] == '"i;ascii-casemap"':
@@ -296,9 +298,50 @@ def zimbrify_date(htest):
     }
 
 
+def zimbrify_actions(actions):
+    acts = {}
+    for (index, a) in enumerate(actions):
+        cat = None
+        if isinstance(a, KeepCommand):
+            aa = {}
+            cat = u'actionKeep'
+        if isinstance(a, DiscardCommand):
+            aa = {}
+            cat = u'actionDiscard'
+        if isinstance(a, StopCommand):
+            aa = {}
+            cat = u'actionStop'
+        if isinstance(a, AddflagCommand):
+            if a['flag'] == '"\\\\Seen"':
+                flag = u'read'
+            else:
+                flag = u'flagged'
+            aa = {u'flagName': flag}
+            cat = u'actionFlag'
+        if isinstance(a, TagCommand):
+            aa = {u'tagName': unicode(a['tag'][1:-1])}
+            cat = u'actionTag'
+        if isinstance(a, FileintoCommand):
+            aa = {u'folderPath': unicode(a['mailbox'][1:-1])}
+            cat = u'actionFileInto'
+        if isinstance(a, RedirectCommand):
+            aa = {u'a': unicode(a['address'][1:-1])}
+            cat = u'actionRedirect'
+
+        if cat is not None:
+            aa[u'index'] = unicode(index)
+            if cat not in acts:
+                acts[cat] = aa
+            elif not isinstance(acts[cat], list):
+                acts[cat] = [acts[cat], aa]
+            else:
+                acts[cat].append(aa)
+    return acts
+
+
 def zimbrify_test(test):
     tests = {
-        u'condition': test.name
+        u'condition': unicode(test.name)
     }
     for (index, t) in enumerate(test['tests']):
         cat = None
@@ -336,13 +379,12 @@ def zimbrify_test(test):
                 tests[cat] = [tests[cat], tt]
             else:
                 tests[cat].append(tt)
-    actions = {}
-    return(tests, actions)
+    return tests
 
 
 def zimbrify(command_list):
     name = 'undefined'
-    active = '1'
+    active = u'1'
     commands = []
     for command in command_list:
         if isinstance(command, RequireCommand):
@@ -355,10 +397,11 @@ def zimbrify(command_list):
             else:
                 print('unknown variable: ' + command['name'], file=sys.stderr)
         elif isinstance(command, IfCommand):
-            (tests, actions) = zimbrify_test(command['test'])
+            tests = zimbrify_test(command['test'])
+            actions = zimbrify_actions(command.children)
             cmd = {
-                u'name': name, u'active': active, u'filterTests': tests,
-                u'filterActions': actions
+                u'name': unicode(name), u'active': unicode(active),
+                u'filterTests': tests, u'filterActions': actions
             }
             commands.append(cmd)
         else:
@@ -440,7 +483,7 @@ def test_things():
             u'actionDiscard': {u'index': u'5'},
             u'actionKeep': {u'index': u'0'}, u'actionStop': {u'index': u'6'}}}
 
-    dummy_sieve = '''require ["date", "relational", "fileinto", "imap4flags",
+    dummy_sieve = r'''require ["date", "relational", "fileinto", "imap4flags",
 "body", "variables"];
 
 set "name" "dummy";
@@ -470,8 +513,8 @@ if allof (
     if p.parse(dummy_sieve) is False:
         print(p.error)
     else:
-        z = zimbrify(p.result)[0]['filterTests']
-        dummy_rule = dummy_rule['filterTests']
+        z = zimbrify(p.result)[0]
+        dummy_rule = dummy_rule
         print(z == dummy_rule)
         print(dummy_sieve)
         print(z)
@@ -479,5 +522,5 @@ if allof (
 
 
 if __name__ == '__main__':
-    test_things()
-    # main()
+   #  test_things()
+    main()
