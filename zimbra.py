@@ -448,6 +448,10 @@ def main():
                 print()
         else:
             new_rules = {u'filterRules': {u'filterRule': parse()}}
+            confirm = raw_input('Do you wish to proceed [y/N]? ')
+            if not confirm[0] in ['y', 'Y']:
+                exit(0)
+            print('Uploading new filters', file=sys.stderr)
             request = RequestXml()
             response = ResponseXml()
             request.set_auth_token(token)
