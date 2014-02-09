@@ -236,8 +236,8 @@ class BodyCommand(TestCommand):
 
 def zimbrify_header(htest):
     h = {
-        u'stringComparison': htest['match-type'][1:],
-        u'value': htest['key-list'][0][1:-1],
+        u'stringComparison': unicode(htest['match-type'][1:]),
+        u'value': unicode(htest['key-list'][0][1:-1]),
         u'header': ','.join(map(lambda h: h[1:-1], htest['header-names']))
     }
     if 'comparator' in htest.arguments:
@@ -249,7 +249,7 @@ def zimbrify_header(htest):
 def zimbrify_address(htest):
     h = zimbrify_header(htest)
     if 'address_part' in htest.arguments:
-        h[u'part'] = htest['address_part'][1:]
+        h[u'part'] = unicode(htest['address_part'][1:])
     return h
 
 
@@ -262,14 +262,23 @@ def zimbrify_size(htest):
         idx += 1
     limit = unicode(limit) + units[idx]
     h = {
-        u'numberComparison': htest['comparator'][1:],
+        u'numberComparison': unicode(htest['comparator'][1:]),
         u's': limit
     }
     return h
 
 
 def zimbrify_exist(htest):
-    return {u'header': htest['header-names'][0][1:-1]}
+    return {u'header': unicode(htest['header-names'][0][1:-1])}
+
+
+def zimbrify_body(htest):
+    # deliberately ignoring the case where we get a list
+    h = {u'value': unicode(htest['key-list'][1:-1])}
+    if 'comparator' in htest.arguments:
+        if htest['comparator']['extra_arg'] == '"i;ascii-casemap"':
+            h[u'caseSensitive'] = u'0'
+    return h
 
 
 def zimbrify_test(test):
@@ -295,6 +304,9 @@ def zimbrify_test(test):
         if isinstance(t, ExistsCommand):
             tt = zimbrify_exist(t)
             cat = u'headerExistsTest'
+        if isinstance(t, BodyCommand):
+            tt = zimbrify_body(t)
+            cat = u'bodyTest'
 
         if cat is not None:
             if negative:
