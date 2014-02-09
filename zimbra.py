@@ -54,7 +54,7 @@ def transform_tests(tests):
                   str(tests[key]), file=sys.stderr)
             print('/* unknown test category ' + key + ' - ' +
                   str(tests[key]) + ' */ true')
-    new_tests.sort(key=lambda x: x.get('index'))
+    new_tests.sort(key=lambda x: int(x.get('index')))
     return map(show_test, new_tests)
 
 
@@ -110,7 +110,7 @@ def show_test(test):
 
 def display_actions(actions):
     a = actions.items()
-    a.sort(key=lambda (_, x): x.get('index'))
+    a.sort(key=lambda (_, x): int(x.get('index')))
     for action in a:
         print('   ', end='')
         display_action(action)
@@ -447,14 +447,29 @@ def main():
                 display_rule(rule)
                 print()
         else:
-            rules2 = {
-                u'xmlns': u'urn:zimbraMail',
-                u'filterRules': {u'filterRule': parse()}
-            }
-            print(rules == rules2)
-            print(rules)
-            print()
-            print(rules2)
+            new_rules = {u'filterRules': {u'filterRule': parse()}}
+            request.clear()
+            response.clear()
+            request.set_auth_token(token)
+            request.add_request('ModifyFilterRulesRequest', new_rules,
+                                'urn:zimbraMail')
+            comm.send_request(request, response)
+
+            if response.is_fault():
+                request.clear()
+                response.clear()
+                request.set_auth_token(token)
+                request.add_request('ModifyFilterRulesRequest', rules,
+                                    'urn:zimbraMail')
+                comm.send_request(request, response)
+                if response.is_fault():
+                    print('Uh oh! Updating your filters generated an error',
+                          file=sys.stderr)
+                else:
+                    print('We could not change your filters, sorry.',
+                          file=sys.stderr)
+            else:
+                print('Seems ok', file=sys.stderr)
 
 
 def test_things():
