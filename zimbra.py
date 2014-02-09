@@ -331,8 +331,11 @@ def zimbrify_test(test):
                 tt[u'negative'] = u'1'
             tt[u'index'] = unicode(index)
             if cat not in tests:
-                tests[cat] = []
-            tests[cat].append(tt)
+                tests[cat] = tt
+            elif not isinstance(tests[cat], list):
+                tests[cat] = [tests[cat], tt]
+            else:
+                tests[cat].append(tt)
     actions = {}
     return(tests, actions)
 
