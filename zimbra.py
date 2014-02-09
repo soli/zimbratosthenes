@@ -12,8 +12,8 @@ from pythonzimbra.communication import Communication
 
 from sievelib.parser import Parser
 from sievelib.commands import ActionCommand, TestCommand, RequireCommand, \
-    IfCommand, HeaderCommand, AddressCommand, SizeCommand, add_commands, \
-    comparator, match_type
+    IfCommand, HeaderCommand, AddressCommand, SizeCommand, NotCommand, \
+    add_commands, comparator, match_type
 
 
 def display_rule(rule):
@@ -233,7 +233,7 @@ class BodyCommand(TestCommand):
     ]
 
 
-def zimbrify_header(htest, index, negative=False):
+def zimbrify_header(htest, index, negative):
     h = {
         u'index': index,
         u'stringComparison': htest['match-type'][1:],
@@ -248,14 +248,14 @@ def zimbrify_header(htest, index, negative=False):
     return h
 
 
-def zimbrify_address(htest, index, negative=False):
+def zimbrify_address(htest, index, negative):
     h = zimbrify_header(htest, index, negative)
     if 'address_part' in htest.arguments:
         h[u'part'] = htest['address_part'][1:]
     return h
 
 
-def zimbrify_size(htest, index, negative=False):
+def zimbrify_size(htest, index, negative):
     limit = int(htest['limit'])
     units = [u'B', u'K', u'M', u'G']
     idx = 0
@@ -278,18 +278,23 @@ def zimbrify_test(test):
         u'condition': test.name
     }
     for (index, t) in enumerate(test['tests']):
+        if isinstance(t, NotCommand):
+            t = t['test']
+            negative = True
+        else:
+            negative = False
         if isinstance(t, HeaderCommand):
-            tt = zimbrify_header(t, index)
+            tt = zimbrify_header(t, index, negative)
             if u'headerTest' not in tests:
                 tests[u'headerTest'] = []
             tests[u'headerTest'].append(tt)
         if isinstance(t, AddressCommand):
-            tt = zimbrify_address(t, index)
+            tt = zimbrify_address(t, index, negative)
             if u'addressTest' not in tests:
                 tests[u'addressTest'] = []
             tests[u'addressTest'].append(tt)
         if isinstance(t, SizeCommand):
-            tt = zimbrify_size(t, index)
+            tt = zimbrify_size(t, index, negative)
             if u'sizeTest' not in tests:
                 tests[u'sizeTest'] = []
             tests[u'sizeTest'].append(tt)
@@ -427,7 +432,8 @@ if allof (
     if p.parse(dummy_sieve) is False:
         print(p.error)
     else:
-        z = zimbrify(p.result)
+        z = zimbrify(p.result)[0]['filterTests']
+        dummy_rule = dummy_rule['filterTests']
         print(z == dummy_rule)
         print(dummy_sieve)
         print(z)
