@@ -12,7 +12,8 @@ from pythonzimbra.communication import Communication
 
 from sievelib.parser import Parser
 from sievelib.commands import ActionCommand, TestCommand, RequireCommand, \
-    IfCommand, HeaderCommand, AddressCommand, SizeCommand, add_commands
+    IfCommand, HeaderCommand, AddressCommand, SizeCommand, add_commands, \
+    comparator, match_type
 
 
 def display_rule(rule):
@@ -33,7 +34,8 @@ def display_test(test):
 
 def transform_tests(tests):
     new_tests = []
-    known_tests = ['headerTest', 'sizeTest', 'dateTest', 'bodyTest']
+    known_tests = ['headerTest', 'sizeTest', 'dateTest', 'bodyTest',
+                   'headerExistsTest']
     for key in known_tests:
         if key in tests:
             t = tests[key]
@@ -66,8 +68,20 @@ def show_test(test):
     show = '   '
     if test.get('negative') == '1':
         show += 'not '
+    if test['test'] == 'headerExists':
+        show += 'exists ["' + test['header'] + '"]'
+        return show
     if test['test'] == 'size':
-        show += 'size :' + test['numberComparison'] + ' ' + test['s']
+        s = test['s']
+        unit = s[-1]
+        s = int(s[:-1])
+        if unit in ['K', 'M', 'G']:
+            s = s * 1024
+        if unit in ['M', 'G']:
+            s = s * 1024
+        if unit == 'G':
+            s = s * 1024
+        show += 'size :' + test['numberComparison'] + ' ' + str(s)
         return show
     if test['test'] == 'date':
         show += 'date :value "' + translate('date', test['dateComparison']) + \
@@ -86,7 +100,7 @@ def show_test(test):
             '"] ["' + test['value'] + '"]'
         return show
     if test['test'] == 'body':
-        show += ' "' + test['string'] + '"'
+        show += ' "' + test['value'] + '"'
         return show
     print('Warning: unknown test: ' + str(test), file=sys.stderr)
     return '/* unknown test: ' + str(test) + ' */ true'
@@ -209,6 +223,16 @@ class DateCommand(TestCommand):
     ]
 
 
+class BodyCommand(TestCommand):
+    args_definition = [
+        comparator,
+        match_type,
+        {"name": "key-list",
+         "type": ["string", "stringlist"],
+         "required": True}
+    ]
+
+
 def zimbrify_header(htest, index, negative=False):
     h = {
         u'index': index,
@@ -232,10 +256,17 @@ def zimbrify_address(htest, index, negative=False):
 
 
 def zimbrify_size(htest, index, negative=False):
+    limit = int(htest['limit'])
+    units = [u'B', u'K', u'M', u'G']
+    idx = 0
+    while idx < len(units) and limit % 1024 == 0:
+        limit = limit / 1024
+        idx += 1
+    limit = unicode(limit) + units[idx]
     h = {
-        u'index': index,
+        u'index': unicode(index),
         u'numberComparison': htest['comparator'][1:],
-        u's': str(htest['limit'])
+        u's': limit
     }
     if negative:
         h[u'negative'] = u'1'
@@ -248,20 +279,20 @@ def zimbrify_test(test):
     }
     for (index, t) in enumerate(test['tests']):
         if isinstance(t, HeaderCommand):
-            tt = zimbrify_header(t, index + 1)
+            tt = zimbrify_header(t, index)
             if u'headerTest' not in tests:
                 tests[u'headerTest'] = []
             tests[u'headerTest'].append(tt)
         if isinstance(t, AddressCommand):
-            tt = zimbrify_address(t, index + 1)
+            tt = zimbrify_address(t, index)
             if u'addressTest' not in tests:
                 tests[u'addressTest'] = []
-            tests[u'headerTest'].append(tt)
+            tests[u'addressTest'].append(tt)
         if isinstance(t, SizeCommand):
-            tt = zimbrify_size(t, index + 1)
+            tt = zimbrify_size(t, index)
             if u'sizeTest' not in tests:
                 tests[u'sizeTest'] = []
-            tests[u'headerTest'].append(tt)
+            tests[u'sizeTest'].append(tt)
     actions = {}
     return(tests, actions)
 
@@ -294,13 +325,18 @@ def zimbrify(command_list):
 
 
 def parse():
-    print('parsing ' + sys.argv[1])
-    add_commands([AddflagCommand, SetCommand, TagCommand, DateCommand])
+    if sys.argv[1] == '-':
+        inputfile = sys.stdin
+    else:
+        inputfile = sys.argv[1]
+    print('parsing ' + inputfile, file=sys.stderr)
+    add_commands([AddflagCommand, SetCommand, TagCommand, DateCommand,
+                  BodyCommand])
     p = Parser()
-    if p.parse_file(sys.argv[1]) is False:
+    if p.parse_file(inputfile) is False:
         print(p.error)
     else:
-        print(zimbrify(p.result))
+        return zimbrify(p.result)
 
 
 def main():
@@ -327,8 +363,77 @@ def main():
                 display_rule(rule)
                 print()
     else:
-        parse()
+        print(parse())
+
+
+def test_things():
+    # Obtained from a dummy and inactive rule on Zimbra
+    dummy_rule = {
+        u'active': u'0',
+        u'filterTests': {
+            u'bodyTest': {u'index': u'6', u'value': u'baz'},
+            u'dateTest': {u'index': u'5', u'negative': u'1',
+                          u'dateComparison': u'after', u'd': u'1388530800'},
+            u'headerTest': [
+                {u'stringComparison': u'contains', u'index': u'0',
+                 u'value': u'fizz', u'header': u'subject'},
+                {u'stringComparison': u'contains', u'index': u'1',
+                 u'negative': u'1', u'value': u'buzz', u'header': u'from'},
+                {u'stringComparison': u'is', u'index': u'2', u'value': u'foo',
+                 u'header': u'to,cc'},
+                {u'stringComparison': u'matches', u'index': u'3',
+                 u'negative': u'1', u'value': u'*none?', u'header': u'X-bar'}],
+            u'sizeTest': {u'numberComparison': u'over', u'index': u'4',
+                          u's': u'10M'},
+            u'condition': u'allof',
+            u'headerExistsTest': {u'index': u'7', u'negative': u'1',
+                                  u'header': u'X-dummy'}},
+        u'name': u'dummy',
+        u'filterActions': {
+            u'actionRedirect': {u'a': u'example@example.com', u'index': u'4'},
+            u'actionTag': {u'index': u'1', u'tagName': u'Old'},
+            u'actionFileInto': {u'index': u'3', u'folderPath': u'.pipe'},
+            u'actionFlag': {u'index': u'2', u'flagName': u'read'},
+            u'actionDiscard': {u'index': u'5'},
+            u'actionKeep': {u'index': u'0'}, u'actionStop': {u'index': u'6'}}}
+
+    dummy_sieve = '''require ["date", "relational", "fileinto", "imap4flags",
+"body", "variables"];
+
+set "name" "dummy";
+set "active" "0";
+if allof (
+   header :contains ["subject"] ["fizz"],
+   not header :contains ["from"] ["buzz"],
+   header :is ["to", "cc"] ["foo"],
+   not header :matches ["X-bar"] ["*none?"],
+   size :over 10485760,
+   not date :value "ge" "date" "2014-01-01",
+   body :contains "baz",
+   not exists ["X-dummy"]
+) {
+   keep;
+   tag "Old";
+   addflag "\\Seen";
+   fileinto ".pipe";
+   redirect "example@example.com";
+   discard;
+   stop;
+}
+'''
+    add_commands([AddflagCommand, SetCommand, TagCommand, DateCommand,
+                  BodyCommand])
+    p = Parser()
+    if p.parse(dummy_sieve) is False:
+        print(p.error)
+    else:
+        z = zimbrify(p.result)
+        print(z == dummy_rule)
+        print(dummy_sieve)
+        print(z)
+        print(dummy_rule)
 
 
 if __name__ == '__main__':
-    main()
+    test_things()
+    # main()
