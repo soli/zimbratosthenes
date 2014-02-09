@@ -406,7 +406,6 @@ def zimbrify(command_list):
             commands.append(cmd)
         else:
             print('unknown command: ' + command, file=sys.stderr)
-    commands.reverse()
     return commands
 
 
@@ -428,28 +427,34 @@ def parse():
 def main():
     url = 'https://zimbra.inria.fr/service/soap/'
 
-    if len(sys.argv) < 2:
-        token = get_token(url)
-        request = RequestXml()
-        request.set_auth_token(token)
+    token = get_token(url)
+    request = RequestXml()
+    request.set_auth_token(token)
 
-        request.add_request('GetFilterRulesRequest', {}, 'urn:zimbraMail')
+    request.add_request('GetFilterRulesRequest', {}, 'urn:zimbraMail')
 
-        response = ResponseXml()
-        comm = Communication(url)
-        comm.send_request(request, response)
+    response = ResponseXml()
+    comm = Communication(url)
+    comm.send_request(request, response)
 
-        if not response.is_fault():
-            rules = response.get_response()['GetFilterRulesResponse']
+    if not response.is_fault():
+        rules = response.get_response()['GetFilterRulesResponse']
+        if len(sys.argv) < 2:
             print('require ["date", "relational", "fileinto",' +
                   ' "imap4flags", "body", "variables"];')
             print()
             for rule in rules['filterRules']['filterRule']:
-                print(rule)
                 display_rule(rule)
                 print()
-    else:
-        print(parse())
+        else:
+            rules2 = {
+                u'xmlns': u'urn:zimbraMail',
+                u'filterRules': {u'filterRule': parse()}
+            }
+            print(rules == rules2)
+            print(rules)
+            print()
+            print(rules2)
 
 
 def test_things():
