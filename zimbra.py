@@ -4,6 +4,7 @@ from __future__ import print_function
 import getpass
 import sys
 from datetime import date, datetime
+from os.path import basename
 
 from pythonzimbra.tools import auth
 from pythonzimbra.request_xml import RequestXml
@@ -466,7 +467,16 @@ def communicate(comm, token, request_type, request_args):
 
 
 def usage():
-    print('''''')
+    print('''Usage:
+  {0} [file.sieve]
+
+  If an argument is given, {0} will parse the file as a list of sieve rules
+and then upload them to the Zimbra server. '-' can be used to use standard
+input.
+
+  If no argument is given, {0} will download current mail filters from the
+Zimbra server and convert them to sieve rules, displayed on standard output.
+'''.format(basename(sys.argv[0])))
     exit(1)
 
 
