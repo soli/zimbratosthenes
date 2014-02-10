@@ -424,56 +424,68 @@ def parse():
         return zimbrify(p.result)
 
 
-def main():
-    url = 'https://zimbra.inria.fr/service/soap/'
+def display_rules(rules):
+    print('require ["date", "relational", "fileinto",' +
+          ' "imap4flags", "body", "variables"];')
+    print()
+    for rule in rules:
+        display_rule(rule)
+        print()
 
-    token = get_token(url)
+
+def update_rules(comm, token, rules):
+    new_rules = {u'filterRules': {u'filterRule': parse()}}
+    confirm = raw_input('Do you wish to proceed [y/N]? ')
+    if not confirm[0] in ['y', 'Y']:
+        exit(0)
+        print('Uploading new filters', file=sys.stderr)
+        response = communicate(comm, token,
+                               'ModifyFilterRulesRequest', new_rules)
+
+        if response.is_fault():
+            response = communicate(comm, token,
+                                   'ModifyFilterRulesRequest', rules)
+            if response.is_fault():
+                print('Uh oh! Updating your filters generated an error',
+                      file=sys.stderr)
+            else:
+                print('We could not change your filters, sorry.',
+                      file=sys.stderr)
+        else:
+            print('Seems ok', file=sys.stderr)
+
+
+def communicate(comm, token, request_type, request_args):
     request = RequestXml()
     request.set_auth_token(token)
-
-    request.add_request('GetFilterRulesRequest', {}, 'urn:zimbraMail')
+    request.add_request(request_type, request_args, 'urn:zimbraMail')
 
     response = ResponseXml()
-    comm = Communication(url)
     comm.send_request(request, response)
+    return response
+
+
+def usage():
+    print('''''')
+    exit(1)
+
+
+def main():
+    if len(sys.argv) > 2 or '-h' in sys.argv or '--help' in sys.argv:
+        usage()
+
+    url = 'https://zimbra.inria.fr/service/soap/'
+    token = get_token(url)
+    comm = Communication(url)
+
+    response = communicate(comm, token, 'GetFilterRulesRequest', {})
 
     if not response.is_fault():
         rules = response.get_response()['GetFilterRulesResponse']
         if len(sys.argv) < 2:
-            print('require ["date", "relational", "fileinto",' +
-                  ' "imap4flags", "body", "variables"];')
-            print()
-            for rule in rules['filterRules']['filterRule']:
-                display_rule(rule)
-                print()
+            display_rules(rules['filterRules']['filterRule'])
         else:
-            new_rules = {u'filterRules': {u'filterRule': parse()}}
-            confirm = raw_input('Do you wish to proceed [y/N]? ')
-            if not confirm[0] in ['y', 'Y']:
-                exit(0)
-            print('Uploading new filters', file=sys.stderr)
-            request = RequestXml()
-            response = ResponseXml()
-            request.set_auth_token(token)
-            request.add_request('ModifyFilterRulesRequest', new_rules,
-                                'urn:zimbraMail')
-            comm.send_request(request, response)
-
-            if response.is_fault():
-                request = RequestXml()
-                response = ResponseXml()
-                request.set_auth_token(token)
-                request.add_request('ModifyFilterRulesRequest', rules,
-                                    'urn:zimbraMail')
-                comm.send_request(request, response)
-                if response.is_fault():
-                    print('Uh oh! Updating your filters generated an error',
-                          file=sys.stderr)
-                else:
-                    print('We could not change your filters, sorry.',
-                          file=sys.stderr)
-            else:
-                print('Seems ok', file=sys.stderr)
+            update_rules(comm, token, rules)
 
 
 def test_things():
