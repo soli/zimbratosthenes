@@ -1,8 +1,15 @@
+from io import StringIO
+import sys
+
 import zimbra
 
 
 def test_things():
-    # Obtained from a dummy and inactive rule on Zimbra
+    '''No unit tests for zimbratosthenes, only one big integration test
+
+    Basically, a big ugly compound filter was built on Zimbra, then obtained
+    through a request. We check that if translated to sieve and back we do not
+    lose anything'''
     dummy_rule = {
         u'active': u'0',
         u'filterTests': {
@@ -32,8 +39,8 @@ def test_things():
             u'actionDiscard': {u'index': u'5'},
             u'actionKeep': {u'index': u'0'}, u'actionStop': {u'index': u'6'}}}
 
-    dummy_sieve = r'''require ["date", "relational", "fileinto", "imap4flags",
-"body", "variables"];
+    dummy_sieve = u'''require ["date", "relational", "fileinto", \
+"imap4flags", "body", "variables"];
 
 set "name" "dummy";
 set "active" "0";
@@ -49,15 +56,27 @@ if allof (
 ) {
    keep;
    tag "Old";
-   addflag "\\Seen";
+   addflag "\\\\Seen";
    fileinto ".pipe";
    redirect "example@example.com";
    discard;
    stop;
 }
+
 '''
     p = zimbra.init_parser()
     if p.parse(dummy_sieve) is False:
         raise Exception(p.error)
     else:
         assert dummy_rule == zimbra.zimbrify(p.result)[0]
+
+    dummy_out = StringIO()
+    sys.stdout = dummy_out
+    zimbra.display_rules([dummy_rule])
+    sys.stdout.seek(0)
+    dummy_result = sys.stdout.read()
+    sys.stdout.close()
+    sys.stdout = sys.__stdout__
+    assert len(dummy_result) == len(dummy_sieve)
+    for i in xrange(0, len(dummy_sieve)):
+        assert dummy_result[i] == dummy_sieve[i]

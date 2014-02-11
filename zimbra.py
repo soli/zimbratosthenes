@@ -20,25 +20,25 @@ from sievelib.commands import ActionCommand, TestCommand, RequireCommand, \
 
 
 def display_rule(rule):
-    print('set "name" "' + rule['name'] + '";')
-    print('set "active" "' + rule['active'] + '";')
-    print('if ', end='')
-    display_test(rule['filterTests'])
-    print('{')
-    display_actions(rule['filterActions'])
-    print('}')
+    print(u'set "name" "' + rule[u'name'] + u'";')
+    print(u'set "active" "' + rule[u'active'] + u'";')
+    print(u'if ', end=u'')
+    display_test(rule[u'filterTests'])
+    print(u'{')
+    display_actions(rule[u'filterActions'])
+    print(u'}')
 
 
 def display_test(test):
-    print(test['condition'] + ' (')
-    print(',\n'.join(transform_tests(test)))
-    print(') ', end='')
+    print(test[u'condition'] + u' (')
+    print(u',\n'.join(transform_tests(test)))
+    print(u') ', end=u'')
 
 
 def transform_tests(tests):
     new_tests = []
-    known_tests = ['headerTest', 'sizeTest', 'dateTest', 'bodyTest',
-                   'headerExistsTest']
+    known_tests = [u'headerTest', u'sizeTest', u'dateTest', u'bodyTest',
+                   u'headerExistsTest']
     for key in known_tests:
         if key in tests:
             t = tests[key]
@@ -46,107 +46,111 @@ def transform_tests(tests):
             if not isinstance(t, list):
                 t = [t]
             for tt in t:
-                tt['test'] = key[:-4]
+                tt[u'test'] = key[:-4]
             new_tests.extend(t)
-    known_tests.append('condition')
+    known_tests.append(u'condition')
     for key in tests.keys():
         if key not in known_tests:
-            print('Warning: unknown test category ' + key + ' - ' +
-                  str(tests[key]), file=sys.stderr)
-            print('/* unknown test category ' + key + ' - ' +
-                  str(tests[key]) + ' */ true')
-    new_tests.sort(key=lambda x: int(x.get('index')))
+            print(u'Warning: unknown test category ' + key + u' - ' +
+                  unicode(tests[key]), file=sys.stderr)
+            print(u'/* unknown test category ' + key + u' - ' +
+                  unicode(tests[key]) + u' */ true')
+    new_tests.sort(key=lambda x: int(x.get(u'index')))
     return map(show_test, new_tests)
 
 
 def translate(category, key):
     dic = {
-        'date': {'before': 'le', 'after': 'ge'},
-        'flag': {'read': '\\\\Seen', 'flagged': '\\\\Flagged'}
+        u'date': {u'before': u'le', u'after': u'ge'},
+        u'flag': {u'read': u'\\\\Seen', u'flagged': u'\\\\Flagged'}
     }
     return dic[category][key]
 
 
 def show_test(test):
-    show = '   '
-    if test.get('negative') == '1':
-        show += 'not '
-    if test['test'] == 'headerExists':
-        show += 'exists ["' + test['header'] + '"]'
+    show = u'   '
+    if test.get(u'negative') == u'1':
+        show += u'not '
+    if test[u'test'] == u'headerExists':
+        show += u'exists ["' + test[u'header'] + u'"]'
         return show
-    if test['test'] == 'size':
-        s = test['s']
+    if test[u'test'] == u'size':
+        s = test[u's']
         unit = s[-1]
         s = int(s[:-1])
-        if unit in ['K', 'M', 'G']:
+        if unit in [u'K', u'M', u'G']:
             s = s * 1024
-        if unit in ['M', 'G']:
+        if unit in [u'M', u'G']:
             s = s * 1024
-        if unit == 'G':
+        if unit == u'G':
             s = s * 1024
-        show += 'size :' + test['numberComparison'] + ' ' + str(s)
+        show += u'size :' + test[u'numberComparison'] + u' ' + unicode(s)
         return show
-    if test['test'] == 'date':
-        show += 'date :value "' + translate('date', test['dateComparison']) + \
-            '" "date" "' + date.fromtimestamp(int(test['d'])).isoformat() + '"'
+    if test[u'test'] == u'date':
+        show += u'date :value "' + \
+            translate(u'date', test[u'dateComparison']) + \
+            u'" "date" "' + \
+            date.fromtimestamp(int(test[u'd'])).isoformat() + u'"'
         return show
-    if test['test'] == 'body':
-        show += 'body :contains'
-    if test['test'] == 'header':
-        show += 'header :' + test['stringComparison']
-    if test['test'] == 'address':
-        show += 'address :' + test['stringComparison'] + ' :' + test['part']
-    if test.get('caseSensitive') == '1':
-        show += ' :comparator "i;ascii-casemap"'
-    if test['test'] in ['header', 'address']:
-        show += ' ["' + '", "'.join(test['header'].split(',')) + \
-            '"] ["' + test['value'] + '"]'
+    if test[u'test'] == u'body':
+        show += u'body :contains'
+    if test[u'test'] == u'header':
+        show += u'header :' + test[u'stringComparison']
+    if test[u'test'] == u'address':
+        show += u'address :' + test[u'stringComparison'] + u' :' + \
+            test[u'part']
+    if test.get(u'caseSensitive') == u'1':
+        show += u' :comparator "i;ascii-casemap"'
+    if test[u'test'] in [u'header', u'address']:
+        show += u' ["' + u'", "'.join(test[u'header'].split(u',')) + \
+            u'"] ["' + test[u'value'] + u'"]'
         return show
-    if test['test'] == 'body':
-        show += ' "' + test['value'] + '"'
+    if test[u'test'] == u'body':
+        show += u' "' + test[u'value'] + u'"'
         return show
-    print('Warning: unknown test: ' + str(test), file=sys.stderr)
-    return '/* unknown test: ' + str(test) + ' */ true'
+    print(u'Warning: unknown test: ' + unicode(test), file=sys.stderr)
+    return u'/* unknown test: ' + unicode(test) + u' */ true'
 
 
 def display_actions(actions):
     a = actions.items()
-    a.sort(key=lambda (_, x): int(x.get('index')))
+    a.sort(key=lambda (_, x): int(x.get(u'index')))
     for action in a:
-        print('   ', end='')
+        print(u'   ', end=u'')
         display_action(action)
 
 
 def display_action(action):
-    if action[0] == 'actionFileInto':
-        print('fileinto "' + action[1]['folderPath'] + '";')
+    if action[0] == u'actionFileInto':
+        print(u'fileinto "' + action[1][u'folderPath'] + u'";')
         return
-    if action[0] == 'actionStop':
-        print('stop;')
+    if action[0] == u'actionStop':
+        print(u'stop;')
         return
-    if action[0] == 'actionRedirect':
-        print('redirect "' + action[1]['a'] + '";')
+    if action[0] == u'actionRedirect':
+        print(u'redirect "' + action[1][u'a'] + u'";')
         return
-    if action[0] == 'actionKeep':
-        print('keep;')
+    if action[0] == u'actionKeep':
+        print(u'keep;')
         return
-    if action[0] == 'actionDiscard':
-        print('discard;')
+    if action[0] == u'actionDiscard':
+        print(u'discard;')
         return
     # Zimbra specific
-    if action[0] == 'actionFlag':
-        print('addflag "' + translate('flag', action[1]['flagName']) + '";')
+    if action[0] == u'actionFlag':
+        print(u'addflag "' + translate(u'flag', action[1][u'flagName']) +
+              u'";')
         return
-    if action[0] == 'actionTag':
-        print('tag "' + action[1]['tagName'] + '";')
+    if action[0] == u'actionTag':
+        print(u'tag "' + action[1][u'tagName'] + u'";')
         return
     # reply and notify not taken into account
-    print('Warning: unknown action: ' + str(action), file=sys.stderr)
-    print('/* unknown action: ' + str(action) + ' */ keep;')
+    print(u'Warning: unknown action: ' + unicode(action), file=sys.stderr)
+    print(u'/* unknown action: ' + unicode(action) + u' */ keep;')
 
 
 def get_token(url):
-    login = 'Sylvain.Soliman@inria.fr'
+    login = u'Sylvain.Soliman@inria.fr'
     passwd = getpass.getpass()
 
     return auth.authenticate(
@@ -238,26 +242,26 @@ class BodyCommand(TestCommand):
 
 def zimbrify_header(htest):
     h = {
-        u'stringComparison': unicode(htest['match-type'][1:]),
-        u'value': unicode(htest['key-list'][0][1:-1]),
+        u'stringComparison': unicode(htest[u'match-type'][1:]),
+        u'value': unicode(htest[u'key-list'][0][1:-1]),
         u'header': unicode(
-            ','.join(map(lambda h: h[1:-1], htest['header-names'])))
+            u','.join(map(lambda h: h[1:-1], htest[u'header-names'])))
     }
-    if 'comparator' in htest.arguments:
-        if htest['comparator']['extra_arg'] == '"i;ascii-casemap"':
+    if u'comparator' in htest.arguments:
+        if htest[u'comparator'][u'extra_arg'] == u'"i;ascii-casemap"':
             h[u'caseSensitive'] = u'0'
     return h
 
 
 def zimbrify_address(htest):
     h = zimbrify_header(htest)
-    if 'address_part' in htest.arguments:
-        h[u'part'] = unicode(htest['address_part'][1:])
+    if u'address_part' in htest.arguments:
+        h[u'part'] = unicode(htest[u'address_part'][1:])
     return h
 
 
 def zimbrify_size(htest):
-    limit = int(htest['limit'])
+    limit = int(htest[u'limit'])
     units = [u'B', u'K', u'M', u'G']
     idx = 0
     while idx < len(units) and limit % 1024 == 0:
@@ -265,31 +269,31 @@ def zimbrify_size(htest):
         idx += 1
     limit = unicode(limit) + units[idx]
     h = {
-        u'numberComparison': unicode(htest['comparator'][1:]),
+        u'numberComparison': unicode(htest[u'comparator'][1:]),
         u's': limit
     }
     return h
 
 
 def zimbrify_exist(htest):
-    return {u'header': unicode(htest['header-names'][0][1:-1])}
+    return {u'header': unicode(htest[u'header-names'][0][1:-1])}
 
 
 def zimbrify_body(htest):
     # deliberately ignoring the case where we get a list
-    h = {u'value': unicode(htest['key-list'][1:-1])}
-    if 'comparator' in htest.arguments:
-        if htest['comparator']['extra_arg'] == '"i;ascii-casemap"':
+    h = {u'value': unicode(htest[u'key-list'][1:-1])}
+    if u'comparator' in htest.arguments:
+        if htest[u'comparator'][u'extra_arg'] == u'"i;ascii-casemap"':
             h[u'caseSensitive'] = u'0'
     return h
 
 
 def zimbrify_date(htest):
-    if htest['comparison'] == '"le"':
+    if htest[u'comparison'] == u'"le"':
         comp = u'before'
     else:
         comp = u'after'
-    dt = htest['match-against-field']
+    dt = htest[u'match-against-field']
     since_epoch = int(((datetime(int(dt[1:5]), int(dt[6:8]), int(dt[9:11])) -
                         datetime(1970, 1, 1)) -
                        (datetime.now() - datetime.utcnow())).total_seconds())
@@ -313,20 +317,20 @@ def zimbrify_actions(actions):
             aa = {}
             cat = u'actionStop'
         if isinstance(a, AddflagCommand):
-            if a['flag'] == '"\\\\Seen"':
+            if a[u'flag'] == u'"\\\\Seen"':
                 flag = u'read'
             else:
                 flag = u'flagged'
             aa = {u'flagName': flag}
             cat = u'actionFlag'
         if isinstance(a, TagCommand):
-            aa = {u'tagName': unicode(a['tag'][1:-1])}
+            aa = {u'tagName': unicode(a[u'tag'][1:-1])}
             cat = u'actionTag'
         if isinstance(a, FileintoCommand):
-            aa = {u'folderPath': unicode(a['mailbox'][1:-1])}
+            aa = {u'folderPath': unicode(a[u'mailbox'][1:-1])}
             cat = u'actionFileInto'
         if isinstance(a, RedirectCommand):
-            aa = {u'a': unicode(a['address'][1:-1])}
+            aa = {u'a': unicode(a[u'address'][1:-1])}
             cat = u'actionRedirect'
 
         if cat is not None:
@@ -344,10 +348,10 @@ def zimbrify_test(test):
     tests = {
         u'condition': unicode(test.name)
     }
-    for (index, t) in enumerate(test['tests']):
+    for (index, t) in enumerate(test[u'tests']):
         cat = None
         if isinstance(t, NotCommand):
-            t = t['test']
+            t = t[u'test']
             negative = True
         else:
             negative = False
@@ -384,21 +388,22 @@ def zimbrify_test(test):
 
 
 def zimbrify(command_list):
-    name = 'undefined'
+    name = u'undefined'
     active = u'1'
     commands = []
     for command in command_list:
         if isinstance(command, RequireCommand):
             pass
         elif isinstance(command, SetCommand):
-            if command['name'] == '"name"':
-                name = command['value'][1:-1]
-            elif command['name'] == '"active"':
-                active = command['value'][1:-1]
+            if command[u'name'] == u'"name"':
+                name = command[u'value'][1:-1]
+            elif command[u'name'] == u'"active"':
+                active = command[u'value'][1:-1]
             else:
-                print('unknown variable: ' + command['name'], file=sys.stderr)
+                print(u'unknown variable: ' + command[u'name'],
+                      file=sys.stderr)
         elif isinstance(command, IfCommand):
-            tests = zimbrify_test(command['test'])
+            tests = zimbrify_test(command[u'test'])
             actions = zimbrify_actions(command.children)
             cmd = {
                 u'name': unicode(name), u'active': unicode(active),
@@ -406,7 +411,7 @@ def zimbrify(command_list):
             }
             commands.append(cmd)
         else:
-            print('unknown command: ' + command, file=sys.stderr)
+            print(u'unknown command: ' + command, file=sys.stderr)
     return commands
 
 
@@ -417,11 +422,11 @@ def init_parser():
 
 
 def parse():
-    if sys.argv[1] == '-':
+    if sys.argv[1] == u'-':
         inputfile = sys.stdin
     else:
         inputfile = sys.argv[1]
-    print('parsing ' + inputfile, file=sys.stderr)
+    print(u'parsing ' + inputfile, file=sys.stderr)
     p = init_parser()
     if p.parse_file(inputfile) is False:
         print(p.error)
@@ -430,40 +435,40 @@ def parse():
 
 
 def display_rules(rules):
-    print('require ["date", "relational", "fileinto",' +
-          ' "imap4flags", "body", "variables"];')
-    print()
+    print(u'require ["date", "relational", "fileinto",' +
+          u' "imap4flags", "body", "variables"];')
+    print(u'')
     for rule in rules:
         display_rule(rule)
-        print()
+        print(u'')
 
 
 def update_rules(comm, token, rules):
     new_rules = {u'filterRules': {u'filterRule': parse()}}
-    confirm = raw_input('Do you wish to proceed [y/N]? ')
-    if not confirm[0] in ['y', 'Y']:
+    confirm = raw_input(u'Do you wish to proceed [y/N]? ')
+    if not confirm[0] in [u'y', u'Y']:
         exit(0)
-        print('Uploading new filters', file=sys.stderr)
+        print(u'Uploading new filters', file=sys.stderr)
         response = communicate(comm, token,
-                               'ModifyFilterRulesRequest', new_rules)
+                               u'ModifyFilterRulesRequest', new_rules)
 
         if response.is_fault():
             response = communicate(comm, token,
-                                   'ModifyFilterRulesRequest', rules)
+                                   u'ModifyFilterRulesRequest', rules)
             if response.is_fault():
-                print('Uh oh! Updating your filters generated an error',
+                print(u'Uh oh! Updating your filters generated an error',
                       file=sys.stderr)
             else:
-                print('We could not change your filters, sorry.',
+                print(u'We could not change your filters, sorry.',
                       file=sys.stderr)
         else:
-            print('Seems ok', file=sys.stderr)
+            print(u'Seems ok', file=sys.stderr)
 
 
 def communicate(comm, token, request_type, request_args):
     request = RequestXml()
     request.set_auth_token(token)
-    request.add_request(request_type, request_args, 'urn:zimbraMail')
+    request.add_request(request_type, request_args, u'urn:zimbraMail')
 
     response = ResponseXml()
     comm.send_request(request, response)
@@ -471,7 +476,7 @@ def communicate(comm, token, request_type, request_args):
 
 
 def usage():
-    print('''Usage:
+    print(u'''Usage:
   {0} [file.sieve]
 
   If an argument is given, {0} will parse the file as a list of sieve rules
@@ -485,19 +490,19 @@ Zimbra server and convert them to sieve rules, displayed on standard output.
 
 
 def main():
-    if len(sys.argv) > 2 or '-h' in sys.argv or '--help' in sys.argv:
+    if len(sys.argv) > 2 or u'-h' in sys.argv or u'--help' in sys.argv:
         usage()
 
-    url = 'https://zimbra.inria.fr/service/soap/'
+    url = u'https://zimbra.inria.fr/service/soap/'
     token = get_token(url)
     comm = Communication(url)
 
-    response = communicate(comm, token, 'GetFilterRulesRequest', {})
+    response = communicate(comm, token, u'GetFilterRulesRequest', {})
 
     if not response.is_fault():
-        rules = response.get_response()['GetFilterRulesResponse']
+        rules = response.get_response()[u'GetFilterRulesResponse']
         if len(sys.argv) < 2:
-            display_rules(rules['filterRules']['filterRule'])
+            display_rules(rules[u'filterRules'][u'filterRule'])
         else:
             update_rules(comm, token, rules)
 
