@@ -3,6 +3,7 @@ from __future__ import print_function
 
 import getpass
 import sys
+import os
 from datetime import date, datetime
 from os.path import basename
 
@@ -164,7 +165,8 @@ def display_action(action):
 
 def get_token(url):
     '''Get authentication token from Zimbra SOAP API'''
-    login = u'Sylvain.Soliman@inria.fr'
+    login = os.getenv('LOGNAME') or os.getenv('USER') or os.getlogin()
+    login = unicode(login)
     passwd = getpass.getpass()
 
     return auth.authenticate(
