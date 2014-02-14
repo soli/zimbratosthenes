@@ -329,9 +329,8 @@ def zimbrify_date(htest):
         comp = u'after'
     dt = htest[u'match-against-field']
     since_epoch = int(
-        round(((datetime(int(dt[1:5]), int(dt[6:8]), int(dt[9:11])) -
-                datetime(1970, 1, 1)) -
-               (datetime.now() - datetime.utcnow())).total_seconds()))
+        round((datetime(int(dt[1:5]), int(dt[6:8]), int(dt[9:11])) -
+               datetime(1970, 1, 1)).total_seconds()))
     return {
         u'd': unicode(since_epoch),
         u'dateComparison': comp

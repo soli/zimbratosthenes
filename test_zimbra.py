@@ -6,7 +6,6 @@ lose anything'''
 
 from io import StringIO
 import sys
-import datetime
 
 import zimbra
 
@@ -16,11 +15,7 @@ dummy_rule = {
     u'filterTests': {
         u'bodyTest': {u'index': u'6', u'value': u'baz'},
         u'dateTest': {u'index': u'5', u'negative': u'1',
-                      u'dateComparison': u'after', u'd': unicode(
-                          int(round(
-                              1388527200 +
-                              (datetime.datetime.now() -
-                               datetime.datetime.utcnow()).total_seconds())))},
+                      u'dateComparison': u'after', u'd': u'1388534400'},
         u'headerTest': [
             {u'stringComparison': u'contains', u'index': u'0',
                 u'value': u'fizz', u'header': u'subject'},
