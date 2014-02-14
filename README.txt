@@ -3,6 +3,9 @@ Zimbratosthenes
 ***************
 
 [Warning: experimental]
+.. image:: https://travis-ci.org/soli/zimbratosthenes.png?branch=master
+   :target: https://travis-ci.org/soli/zimbratosthenes
+
 
     *"Cat project" not "pet project"--you are going to put a lot into it but
     don't expect anything back* -- Kent Beck `on Twitter
