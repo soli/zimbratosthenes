@@ -97,3 +97,10 @@ an error parsing a Sieve file or converting to a Zimbra-compatible filter, a
 message will be displayed on stderr.
 
 Good luck, this software is still in a very experimental state!
+
+Credits
+=======
+
+We make a heavy use of `python-zimbra
+<https://github.com/Zimbra-Community/python-zimbra>`_ and of `sievelib
+<https://bitbucket.org/tonioo/sievelib>`_.
