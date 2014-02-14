@@ -22,7 +22,7 @@ with open('README.txt') as f:
 
 setup(
     name='Zimbratosthenes',
-    version='1.0.1',
+    version='1.0.2',
     author='Sylvain Soliman',
     author_email='Sylvain.Soliman@inria.fr',
     url='http://lifeware.inria.fr/~soliman',
