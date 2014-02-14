@@ -22,7 +22,7 @@ with open('README.txt') as f:
 
 setup(
     name='Zimbratosthenes',
-    version='1.0.0',
+    version='1.0.1',
     author='Sylvain Soliman',
     author_email='Sylvain.Soliman@inria.fr',
     url='http://lifeware.inria.fr/~soliman',
@@ -41,12 +41,12 @@ setup(
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',
-
-        # Indicate who your project is intended for
-        'Intended Audience :: Developers',
-        'Topic :: Software Development :: Build Tools',
+        'Environment :: Console',
+        'Intended Audience :: End Users/Desktop',
+        'Topic :: Communications :: Email :: Filters',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 2 :: Only',
     ],
     keywords='zimbra mail sieve filters',
     tests_require=['pytest'],
